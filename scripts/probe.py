@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Read-only connectivity probe. Never prints or publishes source CSV content."""
-import csv, hashlib, io, json, socket, ssl, urllib.error, urllib.request
+import csv, hashlib, io, json, socket, ssl, urllib.error, urllib.request, urllib.parse
 from datetime import datetime, timezone
 
 BASE = "https://stats.tennismylife.org"
@@ -13,7 +13,7 @@ URLS = [
 def probe(url):
     result = {"url": url, "utc": datetime.now(timezone.utc).isoformat()}
     try:
-        host = urllib.request.urlparse(url).hostname
+        host = urllib.parse.urlparse(url).hostname
         result["dns"] = sorted({entry[4][0] for entry in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)})
     except Exception as exc:
         result["dns_error"] = "%s: %s" % (type(exc).__name__, str(exc)[:240])
