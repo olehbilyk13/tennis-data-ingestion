@@ -1,17 +1,80 @@
-name: TennisMyLife ingress probe
+name: TennisMyLife versioned raw CSV archive
 on:
   workflow_dispatch:
   push:
     paths:
       - '.github/workflows/ingress-probe.yml'
-      - 'scripts/probe.py'
+      - 'scripts/ingest.py'
+  # Kyiv 07:00, 10:00 and 21:00; candidates cover winter/summer UTC offsets.
+  schedule:
+    - cron: '0 4,5,7,8,18,19 * * *'
 permissions:
   contents: read
+  actions: read
+concurrency:
+  group: tml-raw-ingestion
+  cancel-in-progress: false
 jobs:
-  probe:
+  archive:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
+      - name: Confirm Kyiv snapshot window
+        id: window
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          local = datetime.now(ZoneInfo("Europe/Kyiv"))
+          allowed = os.environ["EVENT_NAME"] != "schedule" or local.hour in (7, 10, 21)
+          print("Kyiv local time: %s; execute: %s" % (local.isoformat(), allowed))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("run=%s\n" % str(allowed).lower())
+          PY
       - uses: actions/checkout@v4
-      - name: Probe source endpoints (metadata only)
-        run: python3 scripts/probe.py
+        if: steps.window.outputs.run == 'true'
+      - name: Retrieve and verify original CSV bytes
+        if: steps.window.outputs.run == 'true'
+        id: ingestion
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/ingest.py
+      - name: Archive 2025 raw CSV when changed
+        if: steps.ingestion.outputs.upload_2025 == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tml-2025-${{ steps.ingestion.outputs.hash_2025 }}
+          path: snapshots/2025/*.csv
+          retention-days: 90
+          if-no-files-found: error
+          compression-level: 0
+      - name: Archive 2026 raw CSV when changed
+        if: steps.ingestion.outputs.upload_2026 == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tml-2026-${{ steps.ingestion.outputs.hash_2026 }}
+          path: snapshots/2026/*.csv
+          retention-days: 90
+          if-no-files-found: error
+          compression-level: 0
+      - name: Archive ongoing tourneys CSV when changed
+        if: steps.ingestion.outputs.upload_ongoing_tourneys == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tml-ongoing_tourneys-${{ steps.ingestion.outputs.hash_ongoing_tourneys }}
+          path: snapshots/ongoing_tourneys/*.csv
+          retention-days: 90
+          if-no-files-found: error
+          compression-level: 0
+      - name: Save run manifest (including NO_CHANGE/failures)
+        if: always() && steps.window.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tml-manifest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: run_manifest/manifest.json
+          retention-days: 90
+          if-no-files-found: warn
