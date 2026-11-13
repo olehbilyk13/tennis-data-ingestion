@@ -1,0 +1,17 @@
+name: TennisMyLife ingress probe
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/ingress-probe.yml'
+      - 'scripts/probe.py'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe source endpoints (metadata only)
+        run: python3 scripts/probe.py
