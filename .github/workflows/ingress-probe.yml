@@ -20,22 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Confirm Kyiv snapshot window
+      # Do not skip cron-triggered runs based on actual wall clock: GitHub schedule
+      # delivery can be early/late. SHA deduplication makes extra checks safe.
+      - name: Permit scheduled and manual snapshots
         id: window
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import os
-          from datetime import datetime
-          from zoneinfo import ZoneInfo
-          local = datetime.now(ZoneInfo("Europe/Kyiv"))
-          allowed = os.environ["EVENT_NAME"] != "schedule" or local.hour in (7, 10, 21)
-          print("Kyiv local time: %s; execute: %s" % (local.isoformat(), allowed))
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write("run=%s\n" % str(allowed).lower())
-          PY
+        run: echo "run=true" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         if: steps.window.outputs.run == 'true'
       - name: Retrieve and verify original CSV bytes
