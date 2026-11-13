@@ -1,4 +1,5 @@
 name: TennisMyLife versioned raw CSV archive
+# Verified original bytes; SHA-based NO_CHANGE de-duplication.
 on:
   workflow_dispatch:
   push:
