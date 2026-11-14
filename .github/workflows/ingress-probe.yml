@@ -1,5 +1,6 @@
 name: TennisMyLife versioned raw CSV archive
 # Verified original bytes; SHA-based NO_CHANGE de-duplication.
+# Recovery trigger: confirm latest raw data when scheduled GitHub delivery is delayed.
 on:
   workflow_dispatch:
   push:
