@@ -1,5 +1,5 @@
 name: TennisMyLife versioned raw CSV archive
-# Manual safe recovery trigger: 2026-11-22 10:30 Europe/Kyiv; verify current provider original CSV bytes.
+# Manual safe recovery trigger: 2026-11-22 19:28 UTC; nightly raw verification.
 # Verified original bytes; SHA-based NO_CHANGE de-duplication.
 # Recovery trigger: 2026-11-15 21:00 Kyiv; verify latest bytes when schedule delivery is delayed.
 on:
